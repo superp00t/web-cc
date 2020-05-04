@@ -4,6 +4,10 @@
 #include <chrono>
 #include "web.h"
 
+#ifdef WEB_IMPL_EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
 uint64_t getTime()
 {
 	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -70,18 +74,21 @@ void hexDump (const char * desc, const void * addr, const int len) {
     printf ("  %s\n", buff);
 }
 
+// Allocate client
+web::Client client(WEB_UA_DEFAULT);
+uint64_t    lastIteration;
+// If a call to perform() takes longer than this, it will reduce your application's QoE past a reasonable threshold.
+uint64_t maxDelay = 1000 / 40;
+
 int main(int argc, char **argv)
 {
 	setbuf(stdout, NULL);
 	printf("Using %s backend\n", WEB_IMPL);
 
-	std::string url = "https://example.org/";
+	std::string url = "https://crypto.dog/websocket";
 
 	if (argc > 1)
 		url = std::string(argv[1]);
-
-	// Allocate client
-	web::Client client(WEB_UA_DEFAULT);
 
 	// web::Client will delete once the request is completed.
 	web::Request *req = new web::Request("GET", url);
@@ -94,27 +101,38 @@ int main(int argc, char **argv)
 
 	client.addRequest(req);
 
-	auto lastIteration = getTime();
+	lastIteration = getTime();
 
-	// If a call to perform() takes longer than this, it will reduce your application's QoE past a reasonable threshold.
-	uint64_t maxDelay = 1000 / 40;
-	printf("Acceptable delay: %"PRIu64" milliseconds\n", maxDelay);
+	printf("Acceptable delay: %llu milliseconds\n", maxDelay);
 
 	// This call to web::Client::active() is only here to make this program exit when the web::Request is completed.
-	// In graphical applications, you should call perform() in the render loop. 
+	// In graphical applications, you should call perform() in the render loop.
+#ifdef WEB_IMPL_EMSCRIPTEN
+    emscripten_set_main_loop([]() {
+        if (!client.active())
+        {
+            emscripten_cancel_main_loop();
+            return;
+        }
+#else
 	while (client.active())
 	{
+#endif
 		client.perform();
 		uint64_t overrun;
 		if ((overrun = (getTime() - lastIteration)) > maxDelay)
 		{
-			printf("web::Client %s took too much time to perform. (%"PRIu64" milliseconds)\n", WEB_IMPL, overrun);
+			printf("web::Client %s took too much time to perform. (%llu milliseconds)\n", WEB_IMPL, overrun);
 		}
 		else
 		{
 			if (overrun > 0)
-				printf("%s iteration within acceptable limits. (%"PRIu64" milliseconds)\n", WEB_IMPL, overrun);
+				printf("%s iteration within acceptable limits. (%llu milliseconds)\n", WEB_IMPL, overrun);
 		}
 		lastIteration = getTime();
-	}
+#ifdef WEB_IMPL_EMSCRIPTEN
+    }, 60, 0);
+#else 
+    }
+#endif
 }

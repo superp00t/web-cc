@@ -5,7 +5,7 @@ web.h is a single-header library you can embed in your C++ project to make async
 It is intended for use in single-threaded or graphical applications such as game engines, where blocking operations are unacceptable.
 
 web.h supports three HTTP backends:
-  - WinInet (Supported on Windows)
+  - WinInet (Included with Windows)
   - libCURL
   - Emscripten Fetch (Used when compiling to WebAssembly, supported by any major web browser)
 
@@ -55,6 +55,7 @@ int main(int argc, char **argv)
 	// In graphical applications, you should call perform() in the render loop unconditionally.
 	while (client.active())
 	{
+		// req->onComplete will be 
 		client.perform();
 	}
 }
