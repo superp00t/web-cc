@@ -482,6 +482,7 @@ void __EmscriptenOnSuccess(emscripten_fetch_t *fetch)
   request->_appendContent((uint8_t *)fetch->data, fetch->numBytes);
   request->m_complete = true;
   request->m_statusCode = (StatusCode)fetch->status;
+  emscripten_fetch_close(fetch);
 }
 
 void __EmscriptenOnError(emscripten_fetch_t *fetch)
@@ -489,6 +490,7 @@ void __EmscriptenOnError(emscripten_fetch_t *fetch)
   Request *request = (Request *)(fetch->userData);
   request->m_complete = true;
   request->m_statusCode = (StatusCode)fetch->status;
+  emscripten_fetch_close(fetch);
 }
 #endif
 
@@ -578,7 +580,7 @@ DWORD WINAPI __WinInetPerformTask(Request *request)
           NULL);
       request->m_protect.lock();
       request->m_complete = true;
-      request->m_statusCode = statusCode;
+      request->m_statusCode = (StatusCode)statusCode;
       request->m_protect.unlock();
       return 0;
     }
