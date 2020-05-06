@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 	// In graphical applications, you should call perform() in the render loop unconditionally.
 	while (client.active())
 	{
-		// req->onComplete will be 
+		// your onComplete handler will be invoked within this call.
 		client.perform();
 	}
 }
@@ -71,5 +71,5 @@ int main(int argc, char **argv)
 
 ### Emscripten
 
-`emcc example.cc -o example`
+`emcc -s FETCH=1 example.cc -o webfolder/index.html`
 
